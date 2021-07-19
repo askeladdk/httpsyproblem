@@ -22,6 +22,10 @@ import (
 //      httpsyproblem.Details
 //      TraceID string `json:"trace_id" xml:"trace_id"`
 //  }
+//
+//  func (err *MoreDetails) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+//      httpsyproblem.Serve(w, r, err)
+//  }
 type Details struct {
 	// A human-readable explanation specific to this occurrence of the problem.
 	Detail string `json:"detail,omitempty" xml:"detail,omitempty"`
@@ -69,42 +73,8 @@ func (details *Details) StatusCode() int { return details.Status }
 // Unwrap implements the interface used by errors.Unwrap() and returns the wrapped error.
 func (details *Details) Unwrap() error { return details.wrappedError }
 
-func (details *Details) serveJSON(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/problem+json; charset=utf-8")
-	w.Header().Set("X-Content-Type-Options", "nosniff")
-	w.WriteHeader(details.Status)
-	if err := json.NewEncoder(w).Encode(details); err != nil {
-		panic(err)
-	}
-}
-
-func (details *Details) serveXML(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/problem+xml; charset=utf-8")
-	w.Header().Set("X-Content-Type-Options", "nosniff")
-	w.WriteHeader(details.Status)
-	encoder := xml.NewEncoder(w)
-	if _, err := io.WriteString(w, xml.Header); err != nil {
-		panic(err)
-	} else if err := encoder.Encode(details); err != nil {
-		panic(err)
-	}
-}
-
-// ServeHTTP implements http.Handler and replies to the request with a problem details object
-// in JSON or XML format depending on the Accept header header.
-// Panics if an error occurred while marshaling.
-func (details *Details) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	for _, accept := range r.Header["Accept"] {
-		if ok, _ := path.Match("application/*json*", accept); ok {
-			details.serveJSON(w, r)
-			return
-		} else if ok, _ := path.Match("application/*xml*", accept); ok {
-			details.serveXML(w, r)
-			return
-		}
-	}
-	details.serveJSON(w, r)
-}
+// ServeHTTP implements http.Handler.
+func (details *Details) ServeHTTP(w http.ResponseWriter, r *http.Request) { Serve(w, r, details) }
 
 // Error replies to the request by calling err's handler if it implements http.Handler
 // or with a plain text message otherwise.
@@ -114,6 +84,44 @@ func Error(w http.ResponseWriter, r *http.Request, err error) {
 		return
 	}
 	http.Error(w, err.Error(), StatusCode(err))
+}
+
+func serveJSON(w http.ResponseWriter, r *http.Request, err error) {
+	w.Header().Set("Content-Type", "application/problem+json; charset=utf-8")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.WriteHeader(StatusCode(err))
+	if err := json.NewEncoder(w).Encode(err); err != nil {
+		panic(err)
+	}
+}
+
+func serveXML(w http.ResponseWriter, r *http.Request, err error) {
+	w.Header().Set("Content-Type", "application/problem+xml; charset=utf-8")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.WriteHeader(StatusCode(err))
+	encoder := xml.NewEncoder(w)
+	if _, err := io.WriteString(w, xml.Header); err != nil {
+		panic(err)
+	}
+	if err := encoder.Encode(err); err != nil {
+		panic(err)
+	}
+}
+
+// Serve replies to the request with a problem details object
+// in JSON or XML format depending on the Accept request header.
+// Panics if an error occurred while marshaling.
+func Serve(w http.ResponseWriter, r *http.Request, err error) {
+	for _, accept := range r.Header["Accept"] {
+		if ok, _ := path.Match("application/*json*", accept); ok {
+			serveJSON(w, r, err)
+			return
+		} else if ok, _ := path.Match("application/*xml*", accept); ok {
+			serveXML(w, r, err)
+			return
+		}
+	}
+	serveJSON(w, r, err)
 }
 
 // StatusCode reports the HTTP status code associated with err

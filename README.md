@@ -39,7 +39,11 @@ Embed `Details` inside another type to add custom fields and use `New` to initia
 ```go
 type MoreDetails struct {
     httpsyproblem.Details
-    TraceID string `json:"trace_id,omitempty"`
+    TraceID string `json:"trace_id" xml:"trace_id"`
+}
+
+func (err *MoreDetails) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+    httpsyproblem.Serve(w, r, err)
 }
 
 var err error = &MoreDetails{

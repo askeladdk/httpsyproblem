@@ -15,6 +15,10 @@ type testEmbeddedDetails struct {
 	ID string `json:"id" xml:"id"`
 }
 
+func (err *testEmbeddedDetails) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	Serve(w, r, err)
+}
+
 func TestEmbed(t *testing.T) {
 	detail := &testEmbeddedDetails{
 		Details: New(http.StatusBadRequest, nil),
@@ -31,15 +35,26 @@ func TestEmbed(t *testing.T) {
 		t.Fatal()
 	}
 
-	b, _ := json.Marshal(detail)
-	if string(b) != `{"detail":"invalid input","status":400,"title":"Bad Request","type":"about:blank","id":"myid"}` {
-		t.Fatal(string(b))
-	}
+	t.Run("JSON", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest("GET", "/", nil)
+		Error(w, r, detail)
+		b := w.Body.String()
+		if b != `{"detail":"invalid input","status":400,"title":"Bad Request","type":"about:blank","id":"myid"}`+"\n" {
+			t.Fatal(b)
+		}
+	})
 
-	c, _ := xml.Marshal(detail)
-	if string(c) != `<problem xmlns="urn:ietf:rfc:7807"><detail>invalid input</detail><status>400</status><title>Bad Request</title><type>about:blank</type><id>myid</id></problem>` {
-		t.Fatal(string(c))
-	}
+	t.Run("XML", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest("GET", "/", nil)
+		r.Header.Set("Accept", "application/xml")
+		Error(w, r, detail)
+		b := w.Body.String()
+		if b != xml.Header+`<problem xmlns="urn:ietf:rfc:7807"><detail>invalid input</detail><status>400</status><title>Bad Request</title><type>about:blank</type><id>myid</id></problem>` {
+			t.Fatal(b)
+		}
+	})
 }
 
 func TestError(t *testing.T) {

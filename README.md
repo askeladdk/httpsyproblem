@@ -23,7 +23,7 @@ func endpoint(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
-Use the `Details` type directly if you need more control. The error value returns by `Wrap` is of type `Details`.
+Use the `Details` type directly if you need more control. The error value returned by `Wrap` is of type `Details`.
 
 ```go
 var err error = &httpsyproblem.Details{
@@ -34,7 +34,7 @@ var err error = &httpsyproblem.Details{
 }
 ```
 
-Embed `Details` inside another type to add custom fields and use `New` to initialize it.
+Embed `Details` inside another type to add custom fields and use `New` to initialize it. The type should implement ServeHTTP to marshal the custom fields.
 
 ```go
 type MoreDetails struct {

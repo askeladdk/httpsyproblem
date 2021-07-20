@@ -38,6 +38,7 @@ func TestEmbed(t *testing.T) {
 	t.Run("JSON", func(t *testing.T) {
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest("GET", "/", nil)
+		r.Header.Set("Accept", "application/json")
 		Error(w, r, detail)
 		b := w.Body.String()
 		if b != `{"detail":"invalid input","status":400,"title":"Bad Request","type":"about:blank","id":"myid"}`+"\n" {
@@ -84,7 +85,7 @@ func TestError(t *testing.T) {
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest("GET", "/", nil)
 		Error(w, r, io.EOF)
-		if w.Body.String() != "EOF\n" {
+		if w.Body.String() != "Internal Server Error\n" {
 			t.Fatal()
 		}
 	})

@@ -77,13 +77,13 @@ func (details *Details) Unwrap() error { return details.wrappedError }
 func (details *Details) ServeHTTP(w http.ResponseWriter, r *http.Request) { Serve(w, r, details) }
 
 // Error replies to the request by calling err's handler if it implements http.Handler
-// or with a plain text message otherwise.
+// or by wrapping it otherwise.
 func Error(w http.ResponseWriter, r *http.Request, err error) {
 	if h, ok := err.(http.Handler); ok {
 		h.ServeHTTP(w, r)
 		return
 	}
-	http.Error(w, err.Error(), StatusCode(err))
+	Error(w, r, Wrap(StatusCode(err), err))
 }
 
 func serveJSON(w http.ResponseWriter, r *http.Request, err error) {
@@ -121,7 +121,7 @@ func Serve(w http.ResponseWriter, r *http.Request, err error) {
 			return
 		}
 	}
-	serveJSON(w, r, err)
+	http.Error(w, err.Error(), StatusCode(err))
 }
 
 // StatusCode reports the HTTP status code associated with err

@@ -33,6 +33,7 @@ func ExampleWrap() {
 func ExampleError_json() {
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/", nil)
+	r.Header.Set("Accept", "application/json")
 
 	err := httpsyproblem.Wrap(http.StatusBadRequest, io.EOF)
 	err.(*httpsyproblem.Details).Instance = "/products/42"
@@ -55,7 +56,7 @@ func ExampleError_text() {
 	_, _ = io.Copy(os.Stdout, w.Body)
 	// Output:
 	// 500 Internal Server Error
-	// EOF
+	// Internal Server Error
 }
 
 func ExampleStatusCode() {

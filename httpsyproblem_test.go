@@ -21,7 +21,7 @@ func (err *testEmbeddedDetails) ServeHTTP(w http.ResponseWriter, r *http.Request
 
 func TestEmbed(t *testing.T) {
 	detail := &testEmbeddedDetails{
-		Details: New(http.StatusBadRequest, nil),
+		Details: *New(http.StatusBadRequest, nil),
 		ID:      "myid",
 	}
 

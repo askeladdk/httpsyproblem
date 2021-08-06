@@ -60,8 +60,24 @@ type Details struct {
 
 // New returns a Details with the Detail, Status and Title fields
 // set according to code and err.
-func New(code int, err error) Details {
-	return *Wrap(code, err).(*Details)
+// If code is 0, the result of StatusCode(err) will be used instead.
+func New(code int, err error) *Details {
+	details := Details{Type: "about:blank"}
+
+	if ptr, ok := err.(*Details); ok {
+		details = *ptr
+	} else if err != nil {
+		details.Detail = err.Error()
+	}
+
+	if code == 0 {
+		code = StatusCode(err)
+	}
+
+	details.Status = code
+	details.Title = http.StatusText(code)
+	details.wrappedError = err
+	return &details
 }
 
 // Error implements the error interface and returns the Title field.
@@ -79,11 +95,12 @@ func (details *Details) ServeHTTP(w http.ResponseWriter, r *http.Request) { Serv
 // Error replies to the request by calling err's handler if it implements http.Handler
 // or by wrapping it otherwise.
 func Error(w http.ResponseWriter, r *http.Request, err error) {
-	if h, ok := err.(http.Handler); ok {
-		h.ServeHTTP(w, r)
-		return
+	var h http.Handler
+	var ok bool
+	if h, ok = err.(http.Handler); !ok {
+		h = New(StatusCode(err), err)
 	}
-	Error(w, r, Wrap(StatusCode(err), err))
+	h.ServeHTTP(w, r)
 }
 
 func serveJSON(w http.ResponseWriter, r *http.Request, err error) {
@@ -141,29 +158,11 @@ func StatusCode(err error) int {
 }
 
 // Wrap associates an error with a status code and wraps it in a Details.
-// The Detail field is set to err.Error().
-// The Status and Title fields are set according to code
-// or to StatusCode(err) if code is 0.
 func Wrap(code int, err error) error {
-	details := Details{Type: "about:blank"}
-
-	if ptr, ok := err.(*Details); ok {
-		details = *ptr
-	} else if err != nil {
-		details.Detail = err.Error()
-	}
-
-	if code == 0 {
-		code = StatusCode(err)
-	}
-
-	details.Status = code
-	details.Title = http.StatusText(code)
-	details.wrappedError = err
-	return &details
+	return New(code, err)
 }
 
 // Wrapf is a shorthand for wrapping the result of fmt.Errorf.
 func Wrapf(code int, format string, a ...interface{}) error {
-	return Wrap(code, fmt.Errorf(format, a...))
+	return New(code, fmt.Errorf(format, a...))
 }

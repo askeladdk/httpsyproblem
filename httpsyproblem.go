@@ -130,10 +130,10 @@ func serveXML(w http.ResponseWriter, r *http.Request, err error) {
 // Panics if an error occurred while marshaling.
 func Serve(w http.ResponseWriter, r *http.Request, err error) {
 	for _, accept := range r.Header["Accept"] {
-		if ok, _ := path.Match("application/*json*", accept); ok {
+		if ok, _ := path.Match("*/*json*", accept); ok {
 			serveJSON(w, r, err)
 			return
-		} else if ok, _ := path.Match("application/*xml*", accept); ok {
+		} else if ok, _ := path.Match("*/*xml*", accept); ok {
 			serveXML(w, r, err)
 			return
 		}

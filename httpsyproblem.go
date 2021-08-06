@@ -16,7 +16,9 @@ import (
 
 // Details implements the RFC 7807 model and can marshaled to JSON and XML.
 //
-// Additional fields can be added by embedding Details inside another struct:
+// Additional fields can be added by embedding Details inside another struct.
+// The struct should implement ServeHTTP as follows or the additional fields
+// will not be marshaled.
 //
 //  type MoreDetails struct {
 //      httpsyproblem.Details
@@ -24,7 +26,7 @@ import (
 //  }
 //
 //  func (err *MoreDetails) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-//      httpsyproblem.Serve(w, r, err)
+//      httpsyproblem.ServeError(w, r, err)
 //  }
 type Details struct {
 	// A human-readable explanation specific to this occurrence of the problem.
@@ -90,7 +92,7 @@ func (details *Details) StatusCode() int { return details.Status }
 func (details *Details) Unwrap() error { return details.wrappedError }
 
 // ServeHTTP implements http.Handler.
-func (details *Details) ServeHTTP(w http.ResponseWriter, r *http.Request) { Serve(w, r, details) }
+func (details *Details) ServeHTTP(w http.ResponseWriter, r *http.Request) { ServeError(w, r, details) }
 
 // Error replies to the request by calling err's handler if it implements http.Handler
 // or by wrapping it otherwise.
@@ -125,10 +127,10 @@ func serveXML(w http.ResponseWriter, r *http.Request, err error) {
 	}
 }
 
-// Serve replies to the request with a problem details object
+// ServeError replies to the request with a problem details object
 // in JSON or XML format depending on the Accept request header.
 // Panics if an error occurred while marshaling.
-func Serve(w http.ResponseWriter, r *http.Request, err error) {
+func ServeError(w http.ResponseWriter, r *http.Request, err error) {
 	for _, accept := range r.Header["Accept"] {
 		if ok, _ := path.Match("*/*json*", accept); ok {
 			serveJSON(w, r, err)

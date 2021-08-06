@@ -16,7 +16,7 @@ type testEmbeddedDetails struct {
 }
 
 func (err *testEmbeddedDetails) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	Serve(w, r, err)
+	ServeError(w, r, err)
 }
 
 func TestEmbed(t *testing.T) {

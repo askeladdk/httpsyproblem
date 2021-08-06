@@ -8,6 +8,7 @@ package httpsyproblem
 import (
 	"encoding/json"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -145,16 +146,22 @@ func ServeError(w http.ResponseWriter, r *http.Request, err error) {
 
 // StatusCode reports the HTTP status code associated with err
 // if it implements the StatusCode() int method,
+// 504 Gateway Timeout if it implements Timeout() bool,
+// 503 Service Unavailable if it implements Temporary() bool,
 // 500 Internal Server Error otherwise, or 200 OK if err is nil.
+// StatusCode will unwrap err to find the most precise status code.
 func StatusCode(err error) int {
 	if err == nil {
 		return http.StatusOK
-	} else if sc, ok := err.(interface{ StatusCode() int }); ok {
-		return sc.StatusCode()
-	} else if to, ok := err.(interface{ Timeout() bool }); ok && to.Timeout() {
-		return http.StatusGatewayTimeout
-	} else if te, ok := err.(interface{ Temporary() bool }); ok && te.Temporary() {
-		return http.StatusServiceUnavailable
+	}
+	for ; err != nil; err = errors.Unwrap(err) {
+		if sc, ok := err.(interface{ StatusCode() int }); ok {
+			return sc.StatusCode()
+		} else if to, ok := err.(interface{ Timeout() bool }); ok && to.Timeout() {
+			return http.StatusGatewayTimeout
+		} else if te, ok := err.(interface{ Temporary() bool }); ok && te.Temporary() {
+			return http.StatusServiceUnavailable
+		}
 	}
 	return http.StatusInternalServerError
 }

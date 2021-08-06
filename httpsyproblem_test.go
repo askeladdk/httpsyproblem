@@ -1,9 +1,11 @@
 package httpsyproblem
 
 import (
+	"context"
 	"encoding/json"
 	"encoding/xml"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -105,6 +107,37 @@ func TestWrap(t *testing.T) {
 
 	err3 := Wrapf(http.StatusBadRequest, "the %s could not be jiggered", "thing")
 	if err3.(*Details).Detail != errors.Unwrap(err3).Error() {
+		t.Fatal()
+	}
+}
+
+type temporaryError struct{}
+
+func (e temporaryError) Error() string   { return "" }
+func (e temporaryError) Temporary() bool { return true }
+
+func TestStatusCode(t *testing.T) {
+	if StatusCode(nil) != 200 {
+		t.Fatal()
+	}
+
+	if StatusCode(context.DeadlineExceeded) != 504 {
+		t.Fatal()
+	}
+
+	if StatusCode(fmt.Errorf("error: %w", temporaryError{})) != 503 {
+		t.Fatal()
+	}
+
+	if StatusCode(Wrapf(0, "error: %w", temporaryError{})) != 503 {
+		t.Fatal()
+	}
+
+	if StatusCode(Wrap(400, errors.New("bla"))) != 400 {
+		t.Fatal()
+	}
+
+	if StatusCode(errors.New("bla")) != 500 {
 		t.Fatal()
 	}
 }

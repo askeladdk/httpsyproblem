@@ -91,6 +91,7 @@ func (details *Details) isDetails() bool { return true }
 
 // Serve replies to a request by marshaling the error to JSON, XML
 // or plain text depending on the request's Accept header.
+// Note that Serve will panic if marshaling fails.
 // Serve also accepts errors that implement the http.Handler interface,
 // in which case the error is in charge of marshaling itself.
 func Serve(w http.ResponseWriter, r *http.Request, err error) {

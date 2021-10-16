@@ -48,6 +48,12 @@ var err error = &MoreDetails{
 }
 ```
 
+Use the predefined `Status*` errors to serve HTTP status codes without needing to wrap. This is convenient in cases where it is not needed to attach extra information to an error. Every status code present in the `http` package has an equivalent in `httpsyproblem`.
+
+```go
+httpsyproblem.Serve(w, r, httpsyproblem.StatusForbidden)
+```
+
 Read the rest of the [documentation on pkg.go.dev](https://pkg.go.dev/github.com/askeladdk/httpsyproblem). It's easy-peasy!
 
 ## License

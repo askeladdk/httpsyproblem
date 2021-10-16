@@ -118,11 +118,10 @@ func serveXML(w http.ResponseWriter, r *http.Request, err error) {
 	w.Header().Set("Content-Type", "application/problem+xml; charset=utf-8")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.WriteHeader(StatusCode(err))
-	encoder := xml.NewEncoder(w)
 	if _, err := io.WriteString(w, xml.Header); err != nil {
 		panic(err)
 	}
-	if err := encoder.Encode(err); err != nil {
+	if err := xml.NewEncoder(w).Encode(err); err != nil {
 		panic(err)
 	}
 }

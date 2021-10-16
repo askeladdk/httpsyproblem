@@ -15,11 +15,11 @@ go get -u github.com/askeladdk/httpsyproblem
 
 ## Quickstart
 
-The two basic functions are `Wrap` and `Error`. Wrap associates an error with a status code. `Error` replies to requests by checking if an error implements `http.Handler`. Use it instead of `http.Error`.
+The two basic functions are `Wrap` and `Serve`. Wrap associates an error with a status code. `Serve` replies to a request by marshaling the error to JSON, XML or plain text depending on the request's Accept header. Use it instead of `http.Error`. `Serve` also accepts errors that implement the `http.Handler` interface, in which case the error is in charge of marshaling itself.
 
 ```go
 func endpoint(w http.ResponseWriter, r *http.Request) {
-    httpsyproblem.Error(w, r, httpsyproblem.Wrap(http.StatusBadRequest, io.EOF))
+    httpsyproblem.Serve(w, r, httpsyproblem.Wrap(http.StatusBadRequest, io.EOF))
 }
 ```
 
@@ -34,16 +34,12 @@ var err error = &httpsyproblem.Details{
 }
 ```
 
-Embed `Details` inside another type to add custom fields and use `New` to initialize it. The type should implement ServeHTTP to marshal the custom fields.
+Embed `Details` inside another type to add custom fields and use `New` to initialize it.
 
 ```go
 type MoreDetails struct {
     httpsyproblem.Details
     TraceID string `json:"trace_id" xml:"trace_id"`
-}
-
-func (err *MoreDetails) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-    httpsyproblem.Serve(w, r, err)
 }
 
 var err error = &MoreDetails{

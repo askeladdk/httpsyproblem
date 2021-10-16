@@ -15,20 +15,15 @@ import (
 	"path"
 )
 
-// Details implements the RFC 7807 model and can marshaled to JSON and XML.
-//
+// Details implements the RFC 7807 model.
 // Additional fields can be added by embedding Details inside another struct.
-// The struct should implement ServeHTTP as follows or the additional fields
-// will not be marshaled.
 //
 //  type MoreDetails struct {
 //      httpsyproblem.Details
 //      TraceID string `json:"trace_id" xml:"trace_id"`
 //  }
 //
-//  func (err *MoreDetails) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-//      httpsyproblem.ServeError(w, r, err)
-//  }
+//  httpsyproblem.Serve(w, r, MoreDetails{})
 type Details struct {
 	// A human-readable explanation specific to this occurrence of the problem.
 	Detail string `json:"detail,omitempty" xml:"detail,omitempty"`
@@ -92,16 +87,20 @@ func (details *Details) StatusCode() int { return details.Status }
 // Unwrap implements the interface used by errors.Unwrap() and returns the wrapped error.
 func (details *Details) Unwrap() error { return details.wrappedError }
 
-// ServeHTTP implements http.Handler.
-func (details *Details) ServeHTTP(w http.ResponseWriter, r *http.Request) { ServeError(w, r, details) }
+func (details *Details) isDetails() bool { return true }
 
-// Error replies to the request by calling err's handler if it implements http.Handler
-// or by wrapping it otherwise.
-func Error(w http.ResponseWriter, r *http.Request, err error) {
+// Serve replies to a request by marshaling the error to JSON, XML
+// or plain text depending on the request's Accept header.
+// Serve also accepts errors that implement the http.Handler interface,
+// in which case the error is in charge of marshaling itself.
+func Serve(w http.ResponseWriter, r *http.Request, err error) {
 	var h http.Handler
 	var ok bool
 	if h, ok = err.(http.Handler); !ok {
-		h = New(StatusCode(err), err)
+		if d, ok := err.(interface{ isDetails() bool }); !ok || !d.isDetails() {
+			err = New(StatusCode(err), err)
+		}
+		h = errorProxy{err}
 	}
 	h.ServeHTTP(w, r)
 }
@@ -128,16 +127,17 @@ func serveXML(w http.ResponseWriter, r *http.Request, err error) {
 	}
 }
 
-// ServeError replies to the request with a problem details object
-// in JSON or XML format depending on the Accept request header.
-// Panics if an error occurred while marshaling.
-func ServeError(w http.ResponseWriter, r *http.Request, err error) {
+type errorProxy struct{ error }
+
+func (err errorProxy) Unwrap() error { return err.error }
+
+func (err errorProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	for _, accept := range r.Header["Accept"] {
 		if ok, _ := path.Match("*/*json*", accept); ok {
-			serveJSON(w, r, err)
+			serveJSON(w, r, err.error)
 			return
 		} else if ok, _ := path.Match("*/*xml*", accept); ok {
-			serveXML(w, r, err)
+			serveXML(w, r, err.error)
 			return
 		}
 	}

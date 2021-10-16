@@ -37,7 +37,7 @@ func ExampleError_json() {
 
 	err := httpsyproblem.Wrap(http.StatusBadRequest, io.EOF)
 	err.(*httpsyproblem.Details).Instance = "/products/42"
-	httpsyproblem.Error(w, r, err)
+	httpsyproblem.Serve(w, r, err)
 
 	fmt.Println(w.Result().Status)
 	_, _ = io.Copy(os.Stdout, w.Body)
@@ -50,7 +50,7 @@ func ExampleError_text() {
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/", nil)
 
-	httpsyproblem.Error(w, r, io.EOF)
+	httpsyproblem.Serve(w, r, io.EOF)
 
 	fmt.Println(w.Result().Status)
 	_, _ = io.Copy(os.Stdout, w.Body)

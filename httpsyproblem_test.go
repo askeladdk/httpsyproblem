@@ -17,10 +17,6 @@ type testEmbeddedDetails struct {
 	ID string `json:"id" xml:"id"`
 }
 
-func (err *testEmbeddedDetails) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	ServeError(w, r, err)
-}
-
 func TestEmbed(t *testing.T) {
 	detail := &testEmbeddedDetails{
 		Details: *New(http.StatusBadRequest, nil),
@@ -41,7 +37,7 @@ func TestEmbed(t *testing.T) {
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest("GET", "/", nil)
 		r.Header.Set("Accept", "application/json")
-		Error(w, r, detail)
+		Serve(w, r, detail)
 		b := w.Body.String()
 		if b != `{"detail":"invalid input","status":400,"title":"Bad Request","type":"about:blank","id":"myid"}`+"\n" {
 			t.Fatal(b)
@@ -52,7 +48,7 @@ func TestEmbed(t *testing.T) {
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest("GET", "/", nil)
 		r.Header.Set("Accept", "application/xml")
-		Error(w, r, detail)
+		Serve(w, r, detail)
 		b := w.Body.String()
 		if b != xml.Header+`<problem xmlns="urn:ietf:rfc:7807"><detail>invalid input</detail><status>400</status><title>Bad Request</title><type>about:blank</type><id>myid</id></problem>` {
 			t.Fatal(b)
@@ -65,7 +61,7 @@ func TestError(t *testing.T) {
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest("GET", "/", nil)
 		r.Header.Set("Accept", "application/xml")
-		Error(w, r, Wrap(http.StatusBadRequest, io.EOF))
+		Serve(w, r, Wrap(http.StatusBadRequest, io.EOF))
 		if w.Result().StatusCode != http.StatusBadRequest {
 			t.Fatal()
 		} else if w.Body.String() != xml.Header+`<problem xmlns="urn:ietf:rfc:7807"><detail>EOF</detail><status>400</status><title>Bad Request</title><type>about:blank</type></problem>` {
@@ -77,7 +73,7 @@ func TestError(t *testing.T) {
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest("GET", "/", nil)
 		r.Header.Set("Accept", "application/json")
-		Error(w, r, Wrap(http.StatusBadRequest, io.EOF))
+		Serve(w, r, Wrap(http.StatusBadRequest, io.EOF))
 		if w.Body.String() != `{"detail":"EOF","status":400,"title":"Bad Request","type":"about:blank"}`+"\n" {
 			t.Fatal()
 		}
@@ -86,7 +82,7 @@ func TestError(t *testing.T) {
 	t.Run("Text", func(t *testing.T) {
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest("GET", "/", nil)
-		Error(w, r, io.EOF)
+		Serve(w, r, io.EOF)
 		if w.Body.String() != "Internal Server Error\n" {
 			t.Fatal()
 		}
